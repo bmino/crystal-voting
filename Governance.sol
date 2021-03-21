@@ -10,17 +10,22 @@ contract Governance {
 
   using SafeMath for uint;
 
-  /// @notice The duration of voting on a proposal
-  uint public constant votingPeriod = 86000;
+  uint public constant DAY = 86400;
 
-  /// @notice Time since submission before the proposal can be executed
-  uint public constant executionPeriod = 86000 * 2;
+  /// @notice Days duration of voting on a proposal
+  uint public votingPeriodDays = 7;
+
+  /// @notice Days since the end of the voting period before the proposal can be executed
+  uint public executionDelayDays = 3;
+
+  // @notice Days since execution was possible when a proposal is considered vetoed
+  uint public executionExpirationDays = 14;
 
   /// @notice The required minimum number of votes in support of a proposal for it to succeed
-  uint public constant quorumVotes = 5000e18;
+  uint public quorumVotes = 5000e18;
 
   /// @notice The minimum number of votes required for an account to create a proposal
-  uint public constant proposalThreshold = 100e18;
+  uint public proposalThreshold = 100e18;
 
   ICrystalVault public crystalVault;
 
@@ -30,12 +35,18 @@ contract Governance {
   /// @notice The record of all proposals ever proposed
   mapping (uint256 => Proposal) public proposals;
 
+  // @notice The group of addresses allowed to execute approved proposals
+  mapping (address => bool) public governers;
+
   struct Proposal {
     /// @notice Unique id for looking up a proposal
     uint id;
 
     /// @notice Creator of the proposal
     address proposer;
+
+    /// @notice Executor of the proposal
+    address executor;
 
     /// @notice The time at which voting starts
     uint startTime;
@@ -48,8 +59,6 @@ contract Governance {
 
     // @notice Queued transaction hash
     bytes32 txHash;
-
-    bool executed;
 
     /// @notice Receipts of ballots for the entire set of voters
     mapping (address => Receipt) receipts;
@@ -73,17 +82,24 @@ contract Governance {
     Defeated,
     PendingExecution,
     ReadyForExecution,
-    Executed
+    Executed,
+    Vetoed
   }
 
   /// @notice If the votingPeriod is changed and the user votes again, the freeze period will be reset.
   modifier freezeVotes() {
-    crystalVault.freeze(msg.sender, votingPeriod);
+    crystalVault.freeze(msg.sender, DAY.mul(votingPeriodDays));
     _;
   }
 
-  constructor(address _crystalVault) public {
+  modifier isGoverner() {
+    require(governers[msg.sender] == true, "Governance::isGoverner: INSUFFICIENT_PERMISSION");
+    _;
+  }
+
+  constructor(address _crystalVault, address _governer) public {
     crystalVault = ICrystalVault(_crystalVault);
+    governers[_governer] = true;
   }
 
   function state(uint proposalId)
@@ -94,20 +110,18 @@ contract Governance {
     require(proposalCount >= proposalId && proposalId > 0, "Governance::state: invalid proposal id");
     Proposal storage proposal = proposals[proposalId];
 
-    if (block.timestamp <= proposal.startTime.add(votingPeriod)) {
+    if (block.timestamp <= proposal.startTime.add( DAY.mul(votingPeriodDays) )) {
       return ProposalState.Active;
-
-    } else if (proposal.executed == true) {
+    } else if (proposal.executor != address(0)) {
       return ProposalState.Executed;
-
     } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
       return ProposalState.Defeated;
-
-    } else if (block.timestamp < proposal.startTime.add(executionPeriod)) {
+    } else if (block.timestamp < proposal.startTime.add( DAY.mul(votingPeriodDays.add(executionDelayDays)) )) {
       return ProposalState.PendingExecution;
-
-    } else {
+    } else if (block.timestamp < proposal.startTime.add( DAY.mul(votingPeriodDays.add(executionDelayDays).add(executionExpirationDays)) )) {
       return ProposalState.ReadyForExecution;
+    } else {
+      return ProposalState.Vetoed;
     }
   }
 
@@ -122,6 +136,7 @@ contract Governance {
   function execute(uint _proposalId, address _target, uint _value, bytes memory _data)
     public
     payable
+    isGoverner
     returns (bytes memory)
   {
     bytes32 txHash = keccak256(abi.encode(_target, _value, _data));
@@ -132,7 +147,7 @@ contract Governance {
 
     (bool success, bytes memory returnData) = _target.call.value(_value)(_data);
     require(success, "Governance::execute: Transaction execution reverted.");
-    proposal.executed = true;
+    proposal.executor = msg.sender;
 
     return returnData;
   }
@@ -152,11 +167,11 @@ contract Governance {
     Proposal memory newProposal = Proposal({
       id: proposalCount,
       proposer: msg.sender,
+      executor: address(0),
       startTime: block.timestamp,
       forVotes: 0,
       againstVotes: 0,
-      txHash: txHash,
-      executed: false
+      txHash: txHash
     });
 
     proposals[newProposal.id] = newProposal;
@@ -179,6 +194,38 @@ contract Governance {
     receipt.hasVoted = true;
     receipt.support = _support;
     receipt.votes = votes;
+  }
+
+  function addGoverner(address _governer) public isGoverner {
+    governers[_governer] = true;
+  }
+
+  function removeGoverner(address _governer) public isGoverner {
+    governers[_governer] = false;
+  }
+
+  function setVotingPeriodDays(uint _days) public isGoverner {
+    require(_days > 0, "Governance::setVotingPeriodDays: CANNOT_BE_ZERO");
+    votingPeriodDays = _days;
+  }
+
+  function setExecutionDelayDays(uint _days) public isGoverner {
+    require(_days > 0, "Governance::setExecutionDelayDays: CANNOT_BE_ZERO");
+    executionDelayDays = _days;
+  }
+
+  function setExecutionExpirationDays(uint _days) public isGoverner {
+    require(_days > 0, "Governance::setExecutionExpirationDays: CANNOT_BE_ZERO");
+    executionExpirationDays = _days;
+  }
+
+  function setQuorumVotes(uint _votes) public isGoverner {
+    require(_votes > 0, "Governance::setQuorumVotes: CANNOT_BE_ZERO");
+    quorumVotes = _votes;
+  }
+
+  function setProposalThreshold(uint _votes) public isGoverner {
+    proposalThreshold = _votes;
   }
 
 }

@@ -2,3 +2,5 @@
 .vscode/
 
 **/*sandbox*.sol
+
+node_modules/

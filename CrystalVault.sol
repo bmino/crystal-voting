@@ -18,12 +18,10 @@ contract CrystalVault is ICrystalVault {
     mapping(address => Account) accounts;
 
     constructor(
-        address _governance,
         address _iceQueen,
         address _snowball,
         address _pgl
     ) public {
-        governance = _governance;
         iceQueen = _iceQueen;
         snowball = _snowball;
         pgl = _pgl;
@@ -187,6 +185,11 @@ contract CrystalVault is ICrystalVault {
             account.PGL.mul(accSnowballPerShare).div(1e12).sub(
                 account.rewardSnapshot
             );
+    }
+
+    function setGovernance(address _governance) public { 
+        require(governance == address(0) || msg.sender == governance, "CrystalVault::setGovernance: INSUFFICIENT_PERMISSION"); 
+        governance = _governance; 
     }
 
     function sqrt(uint256 x) internal pure returns (uint256 y) {

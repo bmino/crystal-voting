@@ -205,8 +205,8 @@ contract Governance {
     governers[_governer] = false;
   }
 
-  function setvotingPeriodHours(uint _hours) public isGoverner {
-    require(_hours > 0, "Governance::setvotingPeriodHours: CANNOT_BE_ZERO");
+  function setVotingPeriodHours(uint _hours) public isGoverner {
+    require(_hours > 0, "Governance::setVotingPeriodHours: CANNOT_BE_ZERO");
     votingPeriodHours = _hours;
   }
 

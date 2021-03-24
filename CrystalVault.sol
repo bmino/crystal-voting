@@ -120,26 +120,25 @@ contract CrystalVault {
     }
 
     function withdrawAll() public notFrozen {
-        IIceQueen(iceQueen).withdraw(uint256(2), accounts[msg.sender].PGL);
-        (, , , uint256 accSnowballPerShare) =
-            IIceQueen(iceQueen).poolInfo(uint256(2));
-
         Account memory account = accounts[msg.sender];
 
-        // Combine deposited SNOB with pending SNOB from rewards
-        uint256 totalAccountSnowballs =
-            account
-                .rewardCredit
-                .mul(accSnowballPerShare)
-                .sub(account.rewardSnapshot)
-                .add(account.snowball);
-
-        if (totalAccountSnowballs > 0) {
-            IERC20(snowball).transfer(msg.sender, totalAccountSnowballs);
-        }
-
         if (account.PGL > 0) {
+            IIceQueen(iceQueen).withdraw(uint256(2), account.PGL);
             IPangolinPair(pgl).transfer(msg.sender, account.PGL);
+
+            (, , , uint256 accSnowballPerShare) = IIceQueen(iceQueen).poolInfo(uint256(2));
+
+            // Combine deposited SNOB with pending SNOB from rewards
+            uint256 totalAccountSnowballs =
+                account
+                    .rewardCredit
+                    .mul(accSnowballPerShare)
+                    .sub(account.rewardSnapshot)
+                    .add(account.snowball);
+
+            IERC20(snowball).transfer(msg.sender, totalAccountSnowballs);
+        } else if (account.snowball > 0) {
+            IERC20(snowball).transfer(msg.sender, account.snowball);
         }
 
         account.PGL = 0;

@@ -56,7 +56,7 @@ contract CrystalVault {
     }
 
     function isFrozen(address _address) public view returns (bool) {
-        return block.timestamp > accounts[_address].thawTimestamp;
+        return block.timestamp < accounts[_address].thawTimestamp;
     }
 
     function votes(address _owner) public view returns (uint256) {

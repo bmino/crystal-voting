@@ -1,19 +1,20 @@
 pragma solidity ^0.6.12;
 
-import "./interface/ICrystalVault.sol";
+/// SPDX-License-Identifier: MIT
+
 import "./interface/IERC20.sol";
 import "./interface/IIceQueen.sol";
 import "./interface/IPangolinPair.sol";
 
 import "./library/SafeMath.sol";
 
-contract CrystalVault is ICrystalVault {
+contract CrystalVault {
     using SafeMath for uint256;
 
-    address public override governance;
-    address public override iceQueen;
-    address public override snowball;
-    address public override pgl;
+    address public governance;
+    address public iceQueen;
+    address public snowball;
+    address public pgl;
 
     mapping(address => Account) accounts;
 
@@ -44,7 +45,7 @@ contract CrystalVault is ICrystalVault {
         _;
     }
 
-    function freeze(address _address, uint256 _duration) public override {
+    function freeze(address _address, uint256 _duration) public {
         require(
             msg.sender == _address || msg.sender == governance,
             "CrystalVault::freeze: INSUFFICIENT_PERMISSION"
@@ -54,18 +55,17 @@ contract CrystalVault is ICrystalVault {
         }
     }
 
-    function isFrozen(address _address) public view override returns (bool) {
+    function isFrozen(address _address) public view returns (bool) {
         return block.timestamp > accounts[_address].thawTimestamp;
     }
 
-    function votes(address _owner) public view override returns (uint256) {
+    function votes(address _owner) public view returns (uint256) {
         return accounts[_owner].votes;
     }
 
     function quadraticVotes(address _owner)
         public
         view
-        override
         returns (uint256)
     {
         return sqrt(accounts[_owner].votes);
@@ -110,7 +110,6 @@ contract CrystalVault is ICrystalVault {
 
     function deposit(uint256 _amountSnowball, uint256 _amountPGL)
         public
-        override
     {
         if (_amountSnowball > 0) {
             depositSnowball(_amountSnowball);
@@ -120,7 +119,7 @@ contract CrystalVault is ICrystalVault {
         }
     }
 
-    function withdrawAll() public override notFrozen {
+    function withdrawAll() public notFrozen {
         IIceQueen(iceQueen).withdraw(uint256(2), accounts[msg.sender].PGL);
         (, , , uint256 accSnowballPerShare) =
             IIceQueen(iceQueen).poolInfo(uint256(2));
@@ -152,7 +151,6 @@ contract CrystalVault is ICrystalVault {
     function pendingReward(address _owner)
         public
         view
-        override
         returns (uint256)
     {
         Account memory account = accounts[_owner];
@@ -187,9 +185,9 @@ contract CrystalVault is ICrystalVault {
             );
     }
 
-    function setGovernance(address _governance) public { 
-        require(governance == address(0) || msg.sender == governance, "CrystalVault::setGovernance: INSUFFICIENT_PERMISSION"); 
-        governance = _governance; 
+    function setGovernance(address _governance) public {
+        require(governance == address(0) || msg.sender == governance, "CrystalVault::setGovernance: INSUFFICIENT_PERMISSION");
+        governance = _governance;
     }
 
     function sqrt(uint256 x) internal pure returns (uint256 y) {

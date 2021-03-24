@@ -1,5 +1,7 @@
 pragma solidity ^0.6.12;
 
+/// SPDX-License-Identifier: MIT
+
 import "./interface/ICrystalVault.sol";
 
 import "./library/Address.sol";
@@ -155,7 +157,6 @@ contract Governance {
   function propose(address _target, uint _value, bytes memory _data)
     public
     freezeVotes
-    returns (uint)
   {
     uint votes = crystalVault.quadraticVotes(msg.sender);
 

@@ -37,7 +37,7 @@ contract CrystalVault {
         uint256 rewardCredit;
         uint256 rewardSnapshot;
         uint256 votes;
-        uint256 thawTimestamp;
+        uint thawTimestamp;
     }
 
     modifier notFrozen() {

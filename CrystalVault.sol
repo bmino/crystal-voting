@@ -12,9 +12,9 @@ contract CrystalVault {
     using SafeMath for uint256;
 
     address public governance;
-    address public iceQueen;
-    address public snowball;
-    address public pgl;
+    IIceQueen public iceQueen;
+    IERC20 public snowball;
+    IPangolinPair public pgl;
 
     mapping(address => Account) accounts;
 
@@ -23,12 +23,13 @@ contract CrystalVault {
         address _snowball,
         address _pgl
     ) public {
-        iceQueen = _iceQueen;
-        snowball = _snowball;
-        pgl = _pgl;
-        uint256 MAX_INT = 2**256 - 1;
-        IERC20(snowball).approve(iceQueen, MAX_INT);
-        IPangolinPair(pgl).approve(iceQueen, MAX_INT);
+        snowball = IERC20(_snowball);
+        pgl = IPangolinPair(_pgl);
+
+        snowball.approve(_iceQueen, 2**256 - 1);
+        pgl.approve(_iceQueen, 2**256 - 1);
+        
+        iceQueen = IIceQueen(_iceQueen);
     }
 
     struct Account {
@@ -72,7 +73,7 @@ contract CrystalVault {
     }
 
     function depositSnowball(uint256 _amountIn) internal {
-        IERC20(snowball).transferFrom(msg.sender, address(this), _amountIn);
+        snowball.transferFrom(msg.sender, address(this), _amountIn);
         accounts[msg.sender].snowball = accounts[msg.sender].snowball.add(
             _amountIn
         );
@@ -80,12 +81,12 @@ contract CrystalVault {
     }
 
     function depositPGL(uint256 _amountIn) internal {
-        IPangolinPair(pgl).transferFrom(msg.sender, address(this), _amountIn);
+        pgl.transferFrom(msg.sender, address(this), _amountIn);
 
         // Stake PGL with IceQueen
-        IIceQueen(iceQueen).deposit(uint256(2), _amountIn);
+        iceQueen.deposit(uint256(2), _amountIn);
         (, , , uint256 accSnowballPerShare) =
-            IIceQueen(iceQueen).poolInfo(uint256(2));
+            iceQueen.poolInfo(uint256(2));
 
         Account memory account = accounts[msg.sender];
 
@@ -100,9 +101,9 @@ contract CrystalVault {
         account.rewardSnapshot = account.PGL.mul(accSnowballPerShare);
 
         // Convert to SNOB using current Pangolin reserve balance of the PGL pair
-        (, uint112 _reserve1, ) = IPangolinPair(pgl).getReserves(); // _reserve1 is SNOB
+        (, uint112 _reserve1, ) = pgl.getReserves(); // _reserve1 is SNOB
         uint256 representedSNOB =
-            _amountIn.mul(_reserve1).div(IPangolinPair(pgl).totalSupply()); // Ownership of the pair multiplied by SNOB reserve
+            _amountIn.mul(_reserve1).div(pgl.totalSupply()); // Ownership of the pair multiplied by SNOB reserve
         accounts[msg.sender].votes = accounts[msg.sender].votes.add(
             representedSNOB
         );
@@ -123,10 +124,10 @@ contract CrystalVault {
         Account memory account = accounts[msg.sender];
 
         if (account.PGL > 0) {
-            IIceQueen(iceQueen).withdraw(uint256(2), account.PGL);
-            IPangolinPair(pgl).transfer(msg.sender, account.PGL);
+            iceQueen.withdraw(uint256(2), account.PGL);
+            pgl.transfer(msg.sender, account.PGL);
 
-            (, , , uint256 accSnowballPerShare) = IIceQueen(iceQueen).poolInfo(uint256(2));
+            (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(2));
 
             // Combine deposited SNOB with pending SNOB from rewards
             uint256 totalAccountSnowballs =
@@ -136,9 +137,9 @@ contract CrystalVault {
                     .sub(account.rewardSnapshot)
                     .add(account.snowball);
 
-            IERC20(snowball).transfer(msg.sender, totalAccountSnowballs);
+            snowball.transfer(msg.sender, totalAccountSnowballs);
         } else if (account.snowball > 0) {
-            IERC20(snowball).transfer(msg.sender, account.snowball);
+            snowball.transfer(msg.sender, account.snowball);
         }
 
         account.PGL = 0;
@@ -159,21 +160,21 @@ contract CrystalVault {
             uint256 allocPoint,
             uint256 lastRewardBlock,
             uint256 accSnowballPerShare
-        ) = IIceQueen(iceQueen).poolInfo(uint256(2));
+        ) = iceQueen.poolInfo(uint256(2));
 
-        uint256 lpSupply = IPangolinPair(pgl).balanceOf(address(iceQueen));
+        uint256 lpSupply = pgl.balanceOf(address(iceQueen));
 
         if (block.number > lastRewardBlock && lpSupply != 0) {
             uint256 multiplier =
-                IIceQueen(iceQueen).getMultiplier(
+                iceQueen.getMultiplier(
                     lastRewardBlock,
                     block.number
                 );
             uint256 snowballReward =
                 multiplier
-                    .mul(IIceQueen(iceQueen).snowballPerBlock())
+                    .mul(iceQueen.snowballPerBlock())
                     .mul(allocPoint)
-                    .div(IIceQueen(iceQueen).totalAllocPoint());
+                    .div(iceQueen.totalAllocPoint());
             accSnowballPerShare = accSnowballPerShare.add(
                 snowballReward.mul(1e12).div(lpSupply)
             );

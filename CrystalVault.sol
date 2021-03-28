@@ -48,7 +48,7 @@ contract CrystalVault {
 
     function freeze(address _address, uint256 _duration) public {
         require(
-            msg.sender == _address || msg.sender == governance,
+            msg.sender == governance,
             "CrystalVault::freeze: INSUFFICIENT_PERMISSION"
         );
         if (block.timestamp.add(_duration) > accounts[_address].thawTimestamp) {

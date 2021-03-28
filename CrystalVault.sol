@@ -28,7 +28,7 @@ contract CrystalVault {
 
         snowball.approve(_iceQueen, 2**256 - 1);
         pgl.approve(_iceQueen, 2**256 - 1);
-        
+
         iceQueen = IIceQueen(_iceQueen);
     }
 
@@ -38,7 +38,7 @@ contract CrystalVault {
         uint256 rewardCredit;
         uint256 rewardSnapshot;
         uint256 votes;
-        uint thawTimestamp;
+        uint256 thawTimestamp;
     }
 
     modifier notFrozen() {
@@ -64,11 +64,7 @@ contract CrystalVault {
         return accounts[_owner].votes;
     }
 
-    function quadraticVotes(address _owner)
-        public
-        view
-        returns (uint256)
-    {
+    function quadraticVotes(address _owner) public view returns (uint256) {
         return sqrt(accounts[_owner].votes);
     }
 
@@ -85,8 +81,7 @@ contract CrystalVault {
 
         // Stake PGL with IceQueen
         iceQueen.deposit(uint256(2), _amountIn);
-        (, , , uint256 accSnowballPerShare) =
-            iceQueen.poolInfo(uint256(2));
+        (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(2));
 
         Account memory account = accounts[msg.sender];
 
@@ -109,9 +104,7 @@ contract CrystalVault {
         );
     }
 
-    function deposit(uint256 _amountSnowball, uint256 _amountPGL)
-        public
-    {
+    function deposit(uint256 _amountSnowball, uint256 _amountPGL) public {
         if (_amountSnowball > 0) {
             depositSnowball(_amountSnowball);
         }
@@ -148,11 +141,7 @@ contract CrystalVault {
         account.rewardSnapshot = 0;
     }
 
-    function pendingReward(address _owner)
-        public
-        view
-        returns (uint256)
-    {
+    function pendingReward(address _owner) public view returns (uint256) {
         Account memory account = accounts[_owner];
 
         (
@@ -166,15 +155,11 @@ contract CrystalVault {
 
         if (block.number > lastRewardBlock && lpSupply != 0) {
             uint256 multiplier =
-                iceQueen.getMultiplier(
-                    lastRewardBlock,
-                    block.number
-                );
+                iceQueen.getMultiplier(lastRewardBlock, block.number);
             uint256 snowballReward =
-                multiplier
-                    .mul(iceQueen.snowballPerBlock())
-                    .mul(allocPoint)
-                    .div(iceQueen.totalAllocPoint());
+                multiplier.mul(iceQueen.snowballPerBlock()).mul(allocPoint).div(
+                    iceQueen.totalAllocPoint()
+                );
             accSnowballPerShare = accSnowballPerShare.add(
                 snowballReward.mul(1e12).div(lpSupply)
             );
@@ -186,7 +171,10 @@ contract CrystalVault {
     }
 
     function setGovernance(address _governance) public {
-        require(governance == address(0) || msg.sender == governance, "CrystalVault::setGovernance: INSUFFICIENT_PERMISSION");
+        require(
+            governance == address(0) || msg.sender == governance,
+            "CrystalVault::setGovernance: INSUFFICIENT_PERMISSION"
+        );
         governance = _governance;
     }
 

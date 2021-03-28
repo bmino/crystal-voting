@@ -27,6 +27,7 @@ contract Governance {
   /// @notice The minimum number of votes required for an account to create a proposal
   uint public proposalThreshold = 100e18;
 
+  /// @notice Location managing and freezing assests that support voting rights
   ICrystalVault public crystalVault;
 
   /// @notice The total number of proposals
@@ -35,44 +36,24 @@ contract Governance {
   /// @notice The record of all proposals ever proposed
   mapping (uint256 => Proposal) public proposals;
 
-  // @notice The group of addresses allowed to execute approved proposals
+  /// @notice The group of addresses allowed to execute approved proposals
   mapping (address => bool) public governers;
 
   struct Proposal {
-    /// @notice Unique id for looking up a proposal
     uint id;
-
-    /// @notice Creator of the proposal
     address proposer;
-
-    /// @notice Executor of the proposal
     address executor;
-
-    /// @notice The time at which voting starts
     uint startTime;
-
-    /// @notice Current number of votes in favor of this proposal
     uint forVotes;
-
-    /// @notice Current number of votes in opposition to this proposal
     uint againstVotes;
-
-    // @notice Queued transaction hash
     bytes32 txHash;
-
-    /// @notice Receipts of ballots for the entire set of voters
     mapping (address => Receipt) receipts;
   }
 
   /// @notice Ballot receipt record for a voter
   struct Receipt {
-    /// @notice Whether or not a vote has been cast
     bool hasVoted;
-
-    /// @notice Whether or not the voter supports the proposal
     bool support;
-
-    /// @notice The number of votes the voter had, which were cast
     uint votes;
   }
 

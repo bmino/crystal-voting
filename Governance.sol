@@ -12,16 +12,14 @@ contract Governance {
 
   using SafeMath for uint;
 
-  uint public constant HOUR = 3600;
+  /// @notice Duration of voting on a proposal in seconds
+  uint public votingPeriod = 172800; // 48 hours
 
-  /// @notice Hours duration of voting on a proposal
-  uint public votingPeriodHours = 48;
+  /// @notice Seconds since the end of the voting period before the proposal can be executed
+  uint public executionDelay = 0;
 
-  /// @notice Hours since the end of the voting period before the proposal can be executed
-  uint public executionDelayHours = 0;
-
-  // @notice Hours since execution was possible when a proposal is considered vetoed
-  uint public executionExpirationHours = 168; // 7 days
+  // @notice Seconds since execution was possible when a proposal is considered vetoed
+  uint public executionExpiration = 604800; // 7 days
 
   /// @notice The required minimum number of votes in support of a proposal for it to succeed
   uint public quorumVotes = 5000e18;
@@ -90,7 +88,7 @@ contract Governance {
 
   /// @notice If the votingPeriod is changed and the user votes again, the freeze period will be reset.
   modifier freezeVotes() {
-    crystalVault.freeze(msg.sender, HOUR.mul(votingPeriodHours));
+    crystalVault.freeze(msg.sender, votingPeriod);
     _;
   }
 
@@ -112,15 +110,15 @@ contract Governance {
     require(proposalCount >= proposalId && proposalId > 0, "Governance::state: invalid proposal id");
     Proposal storage proposal = proposals[proposalId];
 
-    if (block.timestamp <= proposal.startTime.add( HOUR.mul(votingPeriodHours) )) {
+    if (block.timestamp <= proposal.startTime.add(votingPeriod)) {
       return ProposalState.Active;
     } else if (proposal.executor != address(0)) {
       return ProposalState.Executed;
     } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
       return ProposalState.Defeated;
-    } else if (block.timestamp < proposal.startTime.add( HOUR.mul(votingPeriodHours.add(executionDelayHours)) )) {
+    } else if (block.timestamp < proposal.startTime.add(votingPeriod).add(executionDelay)) {
       return ProposalState.PendingExecution;
-    } else if (block.timestamp < proposal.startTime.add( HOUR.mul(votingPeriodHours.add(executionDelayHours).add(executionExpirationHours)) )) {
+    } else if (block.timestamp < proposal.startTime.add(votingPeriod).add(executionDelay).add(executionExpiration)) {
       return ProposalState.ReadyForExecution;
     } else {
       return ProposalState.Vetoed;
@@ -205,18 +203,18 @@ contract Governance {
     governers[_governer] = false;
   }
 
-  function setVotingPeriodHours(uint _hours) public isGoverner {
-    require(_hours > 0, "Governance::setVotingPeriodHours: CANNOT_BE_ZERO");
-    votingPeriodHours = _hours;
+  function setVotingPeriod(uint _seconds) public isGoverner {
+    require(_seconds > 0, "Governance::setVotingPeriod: CANNOT_BE_ZERO");
+    votingPeriod = _seconds;
   }
 
-  function setExecutionDelayHours(uint _hours) public isGoverner {
-    executionDelayHours = _hours;
+  function setExecutionDelay(uint _seconds) public isGoverner {
+    executionDelay = _seconds;
   }
 
-  function setExecutionExpirationHours(uint _hours) public isGoverner {
-    require(_hours > 0, "Governance::setExecutionExpirationHours: CANNOT_BE_ZERO");
-    executionExpirationHours = _hours;
+  function setExecutionExpiration(uint _seconds) public isGoverner {
+    require(_seconds > 0, "Governance::setExecutionExpiration: CANNOT_BE_ZERO");
+    executionExpiration = _seconds;
   }
 
   function setQuorumVotes(uint _votes) public isGoverner {

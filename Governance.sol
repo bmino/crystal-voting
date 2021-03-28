@@ -67,6 +67,12 @@ contract Governance {
     Vetoed
   }
 
+  event NewVote(address voter, uint proposalId, bool support, uint votes);
+  event NewProposal(address proposer, uint proposalId);
+  event ProposalExecuted(address executor, uint proposalId);
+  event GovernerAdded(address governer);
+  event GovernerRemoved(address governer);
+
   /// @notice If the votingPeriod is changed and the user votes again, the freeze period will be reset.
   modifier freezeVotes() {
     crystalVault.freeze(msg.sender, votingPeriod);
@@ -130,6 +136,8 @@ contract Governance {
     require(success, "Governance::execute: Transaction execution reverted.");
     proposal.executor = msg.sender;
 
+    emit ProposalExecuted(proposal.executor, proposal.id);
+
     return returnData;
   }
 
@@ -155,6 +163,8 @@ contract Governance {
     });
 
     proposals[newProposal.id] = newProposal;
+
+    emit NewProposal(newProposal.proposer, newProposal.id);
   }
 
   function vote(uint _proposalId, bool _support) public freezeVotes {
@@ -174,14 +184,18 @@ contract Governance {
     receipt.hasVoted = true;
     receipt.support = _support;
     receipt.votes = votes;
+
+    emit NewVote(msg.sender, _proposalId, _support, votes);
   }
 
   function addGoverner(address _governer) public isGoverner {
     governers[_governer] = true;
+    emit GovernerAdded(_governer);
   }
 
   function removeGoverner(address _governer) public isGoverner {
     governers[_governer] = false;
+    emit GovernerRemoved(_governer);
   }
 
   function setVotingPeriod(uint _seconds) public isGoverner {

@@ -39,6 +39,7 @@ contract Governance {
 
     struct Proposal {
         uint256 id;
+        string title;
         address proposer;
         address executor;
         uint256 startTime;
@@ -71,7 +72,7 @@ contract Governance {
         bool support,
         uint256 votes
     );
-    event NewProposal(address proposer, uint256 proposalId);
+    event NewProposal(address proposer, uint256 proposalId, string title);
     event ProposalExecuted(address executor, uint256 proposalId);
     event GovernerAdded(address governer);
     event GovernerRemoved(address governer);
@@ -156,6 +157,7 @@ contract Governance {
     }
 
     function propose(
+        string _title,
         address _target,
         uint256 _value,
         bytes memory _data
@@ -173,6 +175,7 @@ contract Governance {
         Proposal memory newProposal =
             Proposal({
                 id: proposalCount,
+                title: _title,
                 proposer: msg.sender,
                 executor: address(0),
                 startTime: block.timestamp,

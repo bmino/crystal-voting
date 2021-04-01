@@ -139,6 +139,7 @@ contract CrystalVault {
         account.snowball = 0;
         account.rewardCredit = 0;
         account.rewardSnapshot = 0;
+        account.votes = 0;
     }
 
     function pendingReward(address _owner) public view returns (uint256) {

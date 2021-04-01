@@ -144,7 +144,7 @@ contract Governance {
             "Governance::execute: Cannot be executed"
         );
 
-        (bool success, bytes memory returnData) = _target.call.value{_value}(_data);
+        (bool success, bytes memory returnData) = _target.call{value: _value}(_data);
         require(
             success,
             "Governance::execute: Transaction execution reverted."
@@ -157,7 +157,7 @@ contract Governance {
     }
 
     function propose(
-        string _title,
+        string calldata _title,
         address _target,
         uint256 _value,
         bytes memory _data
@@ -186,7 +186,7 @@ contract Governance {
 
         proposals[newProposal.id] = newProposal;
 
-        emit NewProposal(newProposal.proposer, newProposal.id);
+        emit NewProposal(newProposal.proposer, newProposal.id, newProposal.title);
     }
 
     function vote(uint256 _proposalId, bool _support) public freezeVotes {

@@ -76,8 +76,9 @@ contract Governance {
     event ProposalExecuted(address executor, uint256 proposalId);
     event GovernerAdded(address governer);
     event GovernerRemoved(address governer);
+    event NewCrystalVault(address crystalVault);
 
-    /// @notice If the votingPeriod is changed and the user votes again, the freeze period will be reset.
+    /// @notice Ensures a voters' funds are frozen for a minimum duration of the current voting period.
     modifier freezeVotes() {
         crystalVault.freeze(msg.sender, votingPeriod);
         _;
@@ -214,6 +215,11 @@ contract Governance {
         receipt.votes = votes;
 
         emit NewVote(msg.sender, _proposalId, _support, votes);
+    }
+
+    function setCrystalVault(address _crystalVault) public isGoverner {
+        crystalVault = ICrystalVault(_crystalVault);
+        emit NewCrystalVault(_crystalVault);
     }
 
     function addGoverner(address _governer) public isGoverner {

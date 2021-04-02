@@ -10,11 +10,11 @@ import "./library/SafeMath.sol";
 contract Governance {
     using SafeMath for uint256;
 
-    /// @notice Duration of voting on a proposal in seconds
-    uint256 public votingPeriod = 172800; // 48 hours
+    /// @notice Minimum voting period in seconds allowed for a proposal
+    uint256 public minimumVotingPeriod = 86400; // 24 hours
 
     /// @notice Seconds since the end of the voting period before the proposal can be executed
-    uint256 public executionDelay = 0;
+    uint256 public executionDelay = 30;
 
     // @notice Seconds since execution was possible when a proposal is considered vetoed
     uint256 public executionExpiration = 604800; // 7 days
@@ -43,6 +43,7 @@ contract Governance {
         address proposer;
         address executor;
         uint256 startTime;
+        uint256 votingPeriod;
         uint256 forVotes;
         uint256 againstVotes;
         bytes32 txHash;
@@ -79,8 +80,8 @@ contract Governance {
     event NewCrystalVault(address crystalVault);
 
     /// @notice Ensures a voters' funds are frozen for a minimum duration of the current voting period.
-    modifier freezeVotes() {
-        crystalVault.freeze(msg.sender, votingPeriod);
+    modifier freezeVotes(uint256 timePeriod) {
+        crystalVault.freeze(msg.sender, timePeriod);
         _;
     }
 
@@ -104,15 +105,15 @@ contract Governance {
         );
         Proposal storage proposal = proposals[proposalId];
 
-        if (block.timestamp <= proposal.startTime.add(votingPeriod)) {
+        if (block.timestamp <= proposal.startTime.add(proposal.votingPeriod)) {
             return ProposalState.Active;
         } else if (proposal.executor != address(0)) {
             return ProposalState.Executed;
         } else if (proposal.forVotes <= proposal.againstVotes || proposal.forVotes < quorumVotes) {
             return ProposalState.Defeated;
-        } else if (block.timestamp < proposal.startTime.add(votingPeriod).add(executionDelay)) {
+        } else if (block.timestamp < proposal.startTime.add(proposal.votingPeriod).add(executionDelay)) {
             return ProposalState.PendingExecution;
-        } else if (block.timestamp < proposal.startTime.add(votingPeriod).add(executionDelay).add(executionExpiration)) {
+        } else if (block.timestamp < proposal.startTime.add(proposal.votingPeriod).add(executionDelay).add(executionExpiration)) {
             return ProposalState.ReadyForExecution;
         } else {
             return ProposalState.Vetoed;
@@ -159,15 +160,21 @@ contract Governance {
 
     function propose(
         string calldata _title,
+        uint256 _votingPeriod,
         address _target,
         uint256 _value,
         bytes memory _data
-    ) public freezeVotes {
+    ) public freezeVotes(_votingPeriod) {
         uint256 votes = crystalVault.quadraticVotes(msg.sender);
 
         require(
             votes > proposalThreshold,
             "Governance::propose: proposer votes below proposal threshold"
+        );
+
+        require(
+            _votingPeriod >= minimumVotingPeriod,
+            "Governance::propose: voting period too short"
         );
 
         bytes32 txHash = keccak256(abi.encode(_target, _value, _data));
@@ -180,6 +187,7 @@ contract Governance {
                 proposer: msg.sender,
                 executor: address(0),
                 startTime: block.timestamp,
+                votingPeriod: _votingPeriod,
                 forVotes: 0,
                 againstVotes: 0,
                 txHash: txHash
@@ -190,7 +198,7 @@ contract Governance {
         emit NewProposal(newProposal.proposer, newProposal.id, newProposal.title);
     }
 
-    function vote(uint256 _proposalId, bool _support) public freezeVotes {
+    function vote(uint256 _proposalId, bool _support) public freezeVotes(proposals[_proposalId].votingPeriod) {
         require(
             state(_proposalId) == ProposalState.Active,
             "Governance::vote: voting is closed"
@@ -232,12 +240,13 @@ contract Governance {
         emit GovernerRemoved(_governer);
     }
 
-    function setVotingPeriod(uint256 _seconds) public isGoverner {
-        require(_seconds > 0, "Governance::setVotingPeriod: CANNOT_BE_ZERO");
-        votingPeriod = _seconds;
+    function setMinimumVotingPeriod(uint256 _seconds) public isGoverner {
+        require(_seconds > 0, "Governance::setMinimumVotingPeriod: CANNOT_BE_ZERO");
+        minimumVotingPeriod = _seconds;
     }
 
     function setExecutionDelay(uint256 _seconds) public isGoverner {
+        require(_seconds >= 30, "Governance::setExecutionDelay: TOO_SHORT");
         executionDelay = _seconds;
     }
 

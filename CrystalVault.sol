@@ -65,7 +65,7 @@ contract CrystalVault {
     }
 
     function quadraticVotes(address _owner) public view returns (uint256) {
-        return sqrt(accounts[_owner].votes);
+        return sqrt(accounts[_owner].votes).mul(1e9);
     }
 
     function depositSnowball(uint256 _amountIn) internal {

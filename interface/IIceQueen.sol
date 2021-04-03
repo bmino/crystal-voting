@@ -37,7 +37,7 @@ interface IIceQueen {
 
     function snowball() external view returns (address);
 
-    function snowballPerBlock() external view returns (uint256);
+    function snowPerBlock() external view returns (uint256);
 
     function poolInfo(uint256)
         external

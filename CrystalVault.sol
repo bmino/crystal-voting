@@ -158,7 +158,7 @@ contract CrystalVault {
             uint256 multiplier =
                 iceQueen.getMultiplier(lastRewardBlock, block.number);
             uint256 snowballReward =
-                multiplier.mul(iceQueen.snowballPerBlock()).mul(allocPoint).div(
+                multiplier.mul(iceQueen.snowPerBlock()).mul(allocPoint).div(
                     iceQueen.totalAllocPoint()
                 );
             accSnowballPerShare = accSnowballPerShare.add(

@@ -16,7 +16,7 @@ contract CrystalVault {
     IERC20 public snowball;
     IPangolinPair public pgl;
 
-    mapping(address => Account) accounts;
+    mapping(address => Account) public accounts;
 
     constructor(
         address _iceQueen,

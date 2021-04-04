@@ -123,9 +123,10 @@ contract Governance {
     function getVote(uint256 _proposalId, address _voter)
         public
         view
-        returns (bool)
+        returns (bool, bool, uint256)
     {
-        return proposals[_proposalId].receipts[_voter].support;
+        Receipt storage receipt = proposals[_proposalId].receipts[_voter];
+        return (receipt.support, receipt.hasVoted, receipt.votes);
     }
 
     function execute(

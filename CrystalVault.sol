@@ -83,7 +83,7 @@ contract CrystalVault {
         iceQueen.deposit(uint256(2), _amountIn);
         (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(2));
 
-        Account memory account = accounts[msg.sender];
+        Account storage account = accounts[msg.sender];
 
         if (account.PGL > 0) {
             account.rewardCredit = account
@@ -114,7 +114,7 @@ contract CrystalVault {
     }
 
     function withdrawAll() public notFrozen {
-        Account memory account = accounts[msg.sender];
+        Account storage account = accounts[msg.sender];
 
         if (account.PGL > 0) {
             iceQueen.withdraw(uint256(2), account.PGL);
@@ -143,7 +143,7 @@ contract CrystalVault {
     }
 
     function pendingReward(address _owner) public view returns (uint256) {
-        Account memory account = accounts[_owner];
+        Account storage account = accounts[_owner];
 
         (
             ,

@@ -242,7 +242,7 @@ contract Governance {
     }
 
     function setMinimumVotingPeriod(uint256 _seconds) public isGoverner {
-        require(_seconds > 0, "Governance::setMinimumVotingPeriod: CANNOT_BE_ZERO");
+        require(_seconds >= 43200, "Governance::setMinimumVotingPeriod: TOO_SHORT");
         minimumVotingPeriod = _seconds;
     }
 

@@ -34,9 +34,6 @@ contract Governance {
     /// @notice The record of all proposals ever proposed
     mapping(uint256 => Proposal) public proposals;
 
-    /// @notice The record of most recent proposal for a submitting address
-    mapping(address => uint256) public lastProposalId;
-
     /// @notice The group of addresses allowed to execute approved proposals
     mapping(address => bool) public governers;
 
@@ -176,11 +173,6 @@ contract Governance {
         );
 
         require(
-            lastProposalId[msg.sender] == uint256(0) || state(lastProposalId[msg.sender]) != ProposalState.Active,
-            "Governance::propose: proposer already has an active proposal"
-        );
-
-        require(
             _votingPeriod >= minimumVotingPeriod,
             "Governance::propose: voting period too short"
         );
@@ -202,7 +194,6 @@ contract Governance {
             });
 
         proposals[newProposal.id] = newProposal;
-        lastProposalId[msg.sender] = newProposal.id;
 
         emit NewProposal(newProposal.proposer, newProposal.id, newProposal.title);
     }

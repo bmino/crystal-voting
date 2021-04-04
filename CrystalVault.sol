@@ -80,8 +80,8 @@ contract CrystalVault {
         pgl.transferFrom(msg.sender, address(this), _amountIn);
 
         // Stake PGL with IceQueen
-        iceQueen.deposit(uint256(2), _amountIn);
-        (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(2));
+        iceQueen.deposit(uint256(1), _amountIn);
+        (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(1));
 
         Account storage account = accounts[msg.sender];
 
@@ -117,10 +117,10 @@ contract CrystalVault {
         Account storage account = accounts[msg.sender];
 
         if (account.PGL > 0) {
-            iceQueen.withdraw(uint256(2), account.PGL);
+            iceQueen.withdraw(uint256(1), account.PGL);
             pgl.transfer(msg.sender, account.PGL);
 
-            (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(2));
+            (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(1));
 
             // Combine deposited SNOB with pending SNOB from rewards
             uint256 totalAccountSnowballs =
@@ -150,7 +150,7 @@ contract CrystalVault {
             uint256 allocPoint,
             uint256 lastRewardBlock,
             uint256 accSnowballPerShare
-        ) = iceQueen.poolInfo(uint256(2));
+        ) = iceQueen.poolInfo(uint256(1));
 
         uint256 lpSupply = pgl.balanceOf(address(iceQueen));
 

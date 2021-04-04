@@ -68,7 +68,7 @@ contract CrystalVault {
         return sqrt(accounts[_owner].votes).mul(1e9);
     }
 
-    function depositSnowball(uint256 _amountIn) internal {
+    function depositSnowball(uint256 _amountIn) public {
         snowball.transferFrom(msg.sender, address(this), _amountIn);
         accounts[msg.sender].snowball = accounts[msg.sender].snowball.add(
             _amountIn
@@ -76,7 +76,7 @@ contract CrystalVault {
         accounts[msg.sender].votes = accounts[msg.sender].votes.add(_amountIn);
     }
 
-    function depositPGL(uint256 _amountIn) internal {
+    function depositPGL(uint256 _amountIn) public {
         pgl.transferFrom(msg.sender, address(this), _amountIn);
 
         // Stake PGL with IceQueen
@@ -86,19 +86,21 @@ contract CrystalVault {
         Account storage account = accounts[msg.sender];
 
         if (account.PGL > 0) {
-            account.rewardCredit = account
-                .rewardCredit
-                .mul(accSnowballPerShare)
-                .sub(account.rewardSnapshot);
+            account.rewardCredit = account.rewardCredit.add(
+                account.PGL
+                    .mul(accSnowballPerShare).div(1e12)
+                    .sub(account.rewardSnapshot)
+            );
         }
 
         account.PGL = account.PGL.add(_amountIn);
-        account.rewardSnapshot = account.PGL.mul(accSnowballPerShare);
+        account.rewardSnapshot = account.PGL.mul(accSnowballPerShare).div(1e12);
 
         // Convert to SNOB using current Pangolin reserve balance of the PGL pair
         (, uint112 _reserve1, ) = pgl.getReserves(); // _reserve1 is SNOB
-        uint256 representedSNOB =
-            _amountIn.mul(_reserve1).div(pgl.totalSupply()); // Ownership of the pair multiplied by SNOB reserve
+
+        // Ownership of the pair multiplied by SNOB reserve
+        uint256 representedSNOB = _amountIn.mul(_reserve1).div(pgl.totalSupply());
         accounts[msg.sender].votes = accounts[msg.sender].votes.add(
             representedSNOB
         );
@@ -118,28 +120,37 @@ contract CrystalVault {
 
         if (account.PGL > 0) {
             iceQueen.withdraw(uint256(2), account.PGL);
-            pgl.transfer(msg.sender, account.PGL);
 
             (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(2));
 
-            // Combine deposited SNOB with pending SNOB from rewards
-            uint256 totalAccountSnowballs =
-                account
-                    .rewardCredit
-                    .mul(accSnowballPerShare)
-                    .sub(account.rewardSnapshot)
-                    .add(account.snowball);
+            // Combine pending SNOB from rewards and deposited SNOB
+            uint256 totalAccountSnowballs = account.PGL
+                .mul(accSnowballPerShare).div(1e12)
+                .sub(account.rewardSnapshot)
+                .add(account.rewardCredit)
+                .add(account.snowball);
+            
+            uint256 totalAccountPGL = account.PGL;
 
+            account.PGL = 0;
+            account.snowball = 0;
+            account.rewardCredit = 0;
+            account.rewardSnapshot = 0;
+            account.votes = 0;
+
+            pgl.transfer(msg.sender, totalAccountPGL);
             snowball.transfer(msg.sender, totalAccountSnowballs);
         } else if (account.snowball > 0) {
-            snowball.transfer(msg.sender, account.snowball);
-        }
+            uint256 totalAccountSnowballs = account.snowball;
 
-        account.PGL = 0;
-        account.snowball = 0;
-        account.rewardCredit = 0;
-        account.rewardSnapshot = 0;
-        account.votes = 0;
+            account.PGL = 0;
+            account.snowball = 0;
+            account.rewardCredit = 0;
+            account.rewardSnapshot = 0;
+            account.votes = 0;
+
+            snowball.transfer(msg.sender, totalAccountSnowballs);
+        }
     }
 
     function pendingReward(address _owner) public view returns (uint256) {
@@ -155,20 +166,23 @@ contract CrystalVault {
         uint256 lpSupply = pgl.balanceOf(address(iceQueen));
 
         if (block.number > lastRewardBlock && lpSupply != 0) {
-            uint256 multiplier =
-                iceQueen.getMultiplier(lastRewardBlock, block.number);
-            uint256 snowballReward =
-                multiplier.mul(iceQueen.snowballPerBlock()).mul(allocPoint).div(
-                    iceQueen.totalAllocPoint()
-                );
+            uint256 multiplier = iceQueen.getMultiplier(
+                lastRewardBlock, 
+                block.number
+            );
+            uint256 snowballReward = multiplier
+                .mul(iceQueen.snowballPerBlock())
+                .mul(allocPoint)
+                .div(iceQueen.totalAllocPoint());
             accSnowballPerShare = accSnowballPerShare.add(
                 snowballReward.mul(1e12).div(lpSupply)
             );
         }
-        return
-            account.PGL.mul(accSnowballPerShare).div(1e12).sub(
-                account.rewardSnapshot
-            );
+
+        return account.PGL
+            .mul(accSnowballPerShare).div(1e12)
+            .sub(account.rewardSnapshot)
+            .add(account.rewardCredit);
     }
 
     function setGovernance(address _governance) public {

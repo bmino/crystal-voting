@@ -15,16 +15,19 @@ contract CrystalVault {
     IIceQueen public iceQueen;
     IERC20 public snowball;
     IPangolinPair public pgl;
+    uint256 public poolId;
 
     mapping(address => Account) public accounts;
 
     constructor(
         address _iceQueen,
         address _snowball,
-        address _pgl
+        address _pgl,
+        uint256 _poolId
     ) public {
         snowball = IERC20(_snowball);
         pgl = IPangolinPair(_pgl);
+        poolId = _poolId;
 
         snowball.approve(_iceQueen, 2**256 - 1);
         pgl.approve(_iceQueen, 2**256 - 1);
@@ -80,8 +83,8 @@ contract CrystalVault {
         pgl.transferFrom(msg.sender, address(this), _amountIn);
 
         // Stake PGL with IceQueen
-        iceQueen.deposit(uint256(2), _amountIn);
-        (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(2));
+        iceQueen.deposit(poolId, _amountIn);
+        (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(poolId);
 
         Account storage account = accounts[msg.sender];
 
@@ -119,9 +122,9 @@ contract CrystalVault {
         Account storage account = accounts[msg.sender];
 
         if (account.PGL > 0) {
-            iceQueen.withdraw(uint256(2), account.PGL);
+            iceQueen.withdraw(poolId, account.PGL);
 
-            (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(uint256(2));
+            (, , , uint256 accSnowballPerShare) = iceQueen.poolInfo(poolId);
 
             // Combine pending SNOB from rewards and deposited SNOB
             uint256 totalAccountSnowballs = account.PGL
@@ -161,7 +164,7 @@ contract CrystalVault {
             uint256 allocPoint,
             uint256 lastRewardBlock,
             uint256 accSnowballPerShare
-        ) = iceQueen.poolInfo(uint256(2));
+        ) = iceQueen.poolInfo(poolId);
 
         uint256 lpSupply = pgl.balanceOf(address(iceQueen));
 

@@ -23,7 +23,7 @@ contract Governance {
     uint256 public quorumVotes = 5000e18;
 
     /// @notice The minimum number of votes required for an account to create a proposal
-    uint256 public proposalThreshold = 100e18;
+    uint256 public proposalThreshold = 316227766015; // voting power of 100,000 SNOB
 
     /// @notice Location managing and freezing assests that support voting rights
     ICrystalVault public crystalVault;
